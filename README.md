@@ -5,7 +5,7 @@
 A tiny config library, packaged for fabric
 
 ### Usage
-1. Make a class extend ConfigData
+1. Make a class implement ConfigData
 2. Use `ConfigClass config = MicroConfig.getOrCreate("config_file_name", new ConfigClass())` wherever
 
 ### Supported data types
