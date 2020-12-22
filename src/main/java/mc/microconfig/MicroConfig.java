@@ -5,6 +5,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,6 +29,10 @@ public class MicroConfig {
             Scanner scanner = new Scanner(configFile);
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
+                if (line.startsWith("//") || line.length() <= 3) {
+                    continue;
+                }
+                
                 String[] split = line.split("=");
                 
                 String fieldName = split[0].replace(" ", "");
@@ -75,7 +80,18 @@ public class MicroConfig {
     
     private static void appendDefaultField(FileWriter writer, ConfigData type, Field field) {
         try {
+            Comment annotation = field.getAnnotation(Comment.class);
+            
+            boolean doExtraBreak = false;
+            if (annotation != null) {
+                String clean = "//" +annotation.value().replace("\n", "\n//");
+                writer.append(clean).append("\n");
+                doExtraBreak = true;
+            }
             writer.append(field.getName()).append("=").append(field.get(type).toString()).append("\n");
+            if (doExtraBreak) {
+                writer.append("\n");
+            }
         } catch (IOException | IllegalAccessException e) {
             e.printStackTrace();
         }

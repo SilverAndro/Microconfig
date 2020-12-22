@@ -18,4 +18,4 @@ A tiny config library, packaged for fabric
 
 Everything must be a top level field, public, and be one of those data types
 
-No, comments arent supported (Idk maybe in the future)
+Comments are supported through the `@Comment` annotation, if you need a linebreak use \n
