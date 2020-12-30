@@ -5,7 +5,6 @@ import net.fabricmc.loader.api.FabricLoader;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -13,17 +12,22 @@ import java.util.Scanner;
 import java.util.UnknownFormatConversionException;
 
 public class MicroConfig {
-    public static <T extends ConfigData> T getOrCreate(String name, T type) {
+    public static <T extends ConfigData> T getOrCreate(String name, T configData) {
         File configFile = FabricLoader.getInstance().getConfigDir().resolve(name + ".mcfg").toFile();
         if (!configFile.exists()) {
-            createConfigFile(configFile, type);
+            createConfigFile(configFile, configData);
         }
-        loadConfig(configFile, type);
-        return type;
+        loadConfig(configFile, configData);
+        if (!configFile.delete()) {
+            System.err.println("Failed to delete config file " + configFile + " so it can be automatically updated");
+        } else {
+            createConfigFile(configFile, configData);
+        }
+        return configData;
     }
     
-    private static void loadConfig(File configFile, ConfigData type) {
-        ArrayList<Field> unsetFields = new ArrayList<>(Arrays.asList(type.getClass().getDeclaredFields()));
+    private static void loadConfig(File configFile, ConfigData configData) {
+        ArrayList<Field> unsetFields = new ArrayList<>(Arrays.asList(configData.getClass().getDeclaredFields()));
         
         try {
             Scanner scanner = new Scanner(configFile);
@@ -39,7 +43,7 @@ public class MicroConfig {
                 String value = split[1];
                 
                 Field field = null;
-                for (Field possible : type.getClass().getDeclaredFields()) {
+                for (Field possible : configData.getClass().getDeclaredFields()) {
                     if (possible.getName().equals(fieldName)) {
                         field = possible;
                     }
@@ -51,12 +55,12 @@ public class MicroConfig {
                 }
                 
                 assert field != null;
-                unpackFieldValuePair(type, field, value);
+                unpackFieldValuePair(configData, field, value);
             }
             
             for (Field field : unsetFields) {
                 FileWriter writer = new FileWriter(configFile, true);
-                appendDefaultField(writer, type, field);
+                appendDefaultField(writer, configData, field);
                 writer.close();
             }
         } catch (IOException e) {
@@ -64,12 +68,12 @@ public class MicroConfig {
         }
     }
     
-    private static void createConfigFile(File configFile, ConfigData type) {
+    private static void createConfigFile(File configFile, ConfigData object) {
         try {
             if (configFile.createNewFile()) {
                 FileWriter writer = new FileWriter(configFile);
-                for (Field field : type.getClass().getDeclaredFields()) {
-                    appendDefaultField(writer, type, field);
+                for (Field field : object.getClass().getDeclaredFields()) {
+                    appendDefaultField(writer, object, field);
                 }
                 writer.close();
             }
@@ -97,27 +101,27 @@ public class MicroConfig {
         }
     }
     
-    private static void unpackFieldValuePair(ConfigData type, Field field, String value) {
+    private static void unpackFieldValuePair(ConfigData object, Field field, String value) {
         try {
             Class<?> fieldType = field.getType();
             if (fieldType == int.class) {
-                field.set(type, Integer.parseInt(value));
+                field.set(object, Integer.parseInt(value));
                 return;
             }
             if (fieldType == float.class) {
-                field.set(type, Float.parseFloat(value));
+                field.set(object, Float.parseFloat(value));
                 return;
             }
             if (fieldType == double.class) {
-                field.set(type, Double.parseDouble(value));
+                field.set(object, Double.parseDouble(value));
                 return;
             }
             if (fieldType == String.class) {
-                field.set(type, value);
+                field.set(object, value);
                 return;
             }
             if (fieldType == boolean.class) {
-                field.set(type, Boolean.parseBoolean(value));
+                field.set(object, Boolean.parseBoolean(value));
                 return;
             }
             throw new UnknownFormatConversionException(field.getName() + " was unable to be deserialized (unsupported type \"" + fieldType + "\")");
