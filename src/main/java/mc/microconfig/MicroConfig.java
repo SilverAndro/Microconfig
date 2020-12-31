@@ -6,6 +6,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Scanner;
@@ -18,10 +19,10 @@ public class MicroConfig {
             createConfigFile(configFile, configData);
         }
         loadConfig(configFile, configData);
-        if (!configFile.delete()) {
+        try {
+            Files.delete(configFile.toPath());
+        } catch (IOException e) {
             System.err.println("Failed to delete config file " + configFile + " so it can be automatically updated");
-        } else {
-            createConfigFile(configFile, configData);
         }
         return configData;
     }
