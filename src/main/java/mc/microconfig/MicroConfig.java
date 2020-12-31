@@ -25,6 +25,7 @@ public class MicroConfig {
         } catch (IOException e) {
             System.err.println("Failed to delete config file " + configFile + " so it can be automatically updated");
         }
+        createConfigFile(configFile, configData);
         return configData;
     }
     
@@ -72,13 +73,11 @@ public class MicroConfig {
     
     private static void createConfigFile(File configFile, ConfigData object) {
         try {
-            if (configFile.createNewFile()) {
-                FileWriter writer = new FileWriter(configFile);
-                for (Field field : object.getClass().getDeclaredFields()) {
-                    appendDefaultField(writer, object, field);
-                }
-                writer.close();
+            FileWriter writer = new FileWriter(configFile);
+            for (Field field : object.getClass().getDeclaredFields()) {
+                appendDefaultField(writer, object, field);
             }
+            writer.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -90,7 +89,7 @@ public class MicroConfig {
             
             boolean doExtraBreak = false;
             if (annotation != null) {
-                String clean = "//" +annotation.value().replace("\n", "\n//");
+                String clean = "//" + annotation.value().replace("\n", "\n//");
                 writer.append(clean).append("\n");
                 doExtraBreak = true;
             }
