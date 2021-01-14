@@ -43,7 +43,7 @@ public class MicroConfig {
                 String[] split = line.split("=");
                 
                 String fieldName = split[0].replace(" ", "");
-                String value = split[1];
+                String value = split[1].replaceFirst(" *", "");
                 
                 Field field = null;
                 for (Field possible : configData.getClass().getDeclaredFields()) {
