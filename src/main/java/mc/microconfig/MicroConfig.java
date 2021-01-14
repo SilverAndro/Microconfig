@@ -57,8 +57,9 @@ public class MicroConfig {
                     value = value.substring(1);
                 }
                 
-                assert field != null;
-                unpackFieldValuePair(configData, field, value);
+                if (field != null) {
+                    unpackFieldValuePair(configData, field, value);
+                }
             }
             
             for (Field field : unsetFields) {
