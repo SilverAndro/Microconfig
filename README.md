@@ -19,3 +19,19 @@ A tiny config library, packaged for fabric
 Everything must be a top level field, public, and be one of those data types
 
 Comments are supported through the `@Comment` annotation, if you need a linebreak use \n
+
+### Installing
+```
+repositories {
+  ...
+  maven { url 'https://jitpack.io' }
+}
+```
+
+```
+dependencies {
+  ...
+  implementation 'com.github.P03W:Microconfig:1.0.5'
+  include 'com.github.P03W:Microconfig:1.0.5'
+}
+```
