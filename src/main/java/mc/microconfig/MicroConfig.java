@@ -39,11 +39,22 @@ public class MicroConfig {
                 if (line.startsWith("//") || line.length() <= 3) {
                     continue;
                 }
-                
-                String[] split = line.split("=");
-                
-                String fieldName = split[0].replace(" ", "");
-                String value = split[1].replaceFirst(" *", "");
+
+                String fieldName;
+                String value;
+                try {
+                    String[] split = line.split("=");
+
+                    fieldName = split[0].replace(" ", "");
+                    value = split[1].replaceFirst(" *", "");
+                } catch (IndexOutOfBoundsException e) {
+                    throw new UnknownFormatConversionException(
+                            "Unable to read config line \"" +
+                                    line +
+                                    "\" for file " +
+                                    configFile.getName()
+                    );
+                }
                 
                 Field field = null;
                 for (Field possible : configData.getClass().getDeclaredFields()) {
