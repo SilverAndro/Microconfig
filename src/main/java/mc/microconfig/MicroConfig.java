@@ -57,7 +57,7 @@ public class MicroConfig {
                 }
                 
                 Field field = null;
-                for (Field possible : configData.getClass().getDeclaredFields()) {
+                for (Field possible : configData.getClass().getFields()) {
                     if (possible.getName().equals(fieldName)) {
                         field = possible;
                     }
