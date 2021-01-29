@@ -86,7 +86,7 @@ public class MicroConfig {
     private static void createConfigFile(File configFile, ConfigData object) {
         try {
             FileWriter writer = new FileWriter(configFile);
-            for (Field field : object.getClass().getDeclaredFields()) {
+            for (Field field : object.getClass().getFields()) {
                 appendDefaultField(writer, object, field);
             }
             writer.close();
