@@ -6,16 +6,16 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
-import java.util.Scanner;
-import java.util.UnknownFormatConversionException;
+import java.nio.file.Files;
+import java.util.*;
 
 public class MicroConfig {
     /**
      * Takes in a name and creates a file in the config directory as specified by fabric
-     *
+     * <p>
      * Creates the file if it doesn't exist, reads it into the object, then sync the file with the expected structure
      *
-     * @param name The name of the file, will have ".mcfg" appended
+     * @param name       The name of the file, will have ".mcfg" appended
      * @param configData The data object, must implement ConfigData as a sanity check
      * @return The original object, with fields set to the read values from the config file
      */
@@ -28,7 +28,7 @@ public class MicroConfig {
     
     /**
      * Works with any file, doesn't depend on FabricLoader
-     *
+     * <p>
      * Creates the file if it doesn't exist, reads it into the object, then sync the file with the expected structure
      *
      * @param configFile The file for for the config file
@@ -36,140 +36,232 @@ public class MicroConfig {
      * @return The original object, with fields set to the read values from the config file
      */
     public static <T extends ConfigData> T getOrCreate(File configFile, T configData) {
+        boolean didExist = configFile.exists();
+        
         // If it doesn't exist, create it for the first time
-        if (!configFile.exists()) {
-            createConfigFile(configFile, configData);
+        if (!didExist) {
+            ConfigProcessor processor = new ConfigProcessor(configFile, configData, false);
+            processor.createConfigFile();
+            processor.end();
         }
         
         // Load it back
-        loadConfig(configFile, configData);
+        ConfigProcessor processor = new ConfigProcessor(configFile, configData, true);
+        processor.loadConfig();
+        processor.end();
         
-        // Try to overwrite the whole file again but with the loaded object
-        // This makes sure the file is always in sync with the expected values
-        try {
-            FileWriter writer = new FileWriter(configFile, false);
-            writer.flush();
-            writer.close();
-        } catch (IOException e) {
-            System.err.println("Failed to delete config file " + configFile + " so it can be automatically updated");
-        }
-        createConfigFile(configFile, configData);
+        processor = new ConfigProcessor(configFile, configData, false);
+        processor.createConfigFile();
+        processor.end();
         return configData;
     }
     
-    private static void loadConfig(File configFile, ConfigData configData) {
-        try {
-            // Scan in the file
-            Scanner scanner = new Scanner(configFile);
-            while (scanner.hasNextLine()) {
-                String line = scanner.nextLine();
-                // Ignore very short lines or comments
-                // 3 characters because the minimum meaningful line is "a=1" or similar
-                if (line.startsWith("//") || line.length() <= 3) {
-                    continue;
-                }
-
-                String fieldName;
-                String value;
-                try {
-                    // Attempt to parse the line
-                    String[] split = line.split("=");
-
-                    fieldName = split[0].replace(" ", "");
-                    value = split[1].replaceFirst(" *", "");
-                } catch (IndexOutOfBoundsException e) {
-                    throw new UnknownFormatConversionException(
-                            "Unable to read config line \"" +
-                                    line +
-                                    "\" for file " +
-                                    configFile.getName()
-                    );
-                }
+    private static class ConfigProcessor {
+        File configFile;
+        FileWriter writer;
+        
+        ArrayList<ConfigData> parsingStack = new ArrayList<>();
+        
+        ConfigProcessor(File configFile, ConfigData configData, Boolean append) {
+            this.configFile = configFile;
+            try {
+                writer = new FileWriter(configFile, append);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            parsingStack.add(configData);
+        }
+        
+        private void loadConfig() {
+            try {
+                List<String> lines = Files.readAllLines(configFile.toPath());
+                lines.removeIf(s -> s.length() < 3 || s.trim().startsWith("//"));
                 
-                // Find the field that matches the expected name
-                Field field = null;
-                for (Field possible : configData.getClass().getFields()) {
-                    if (possible.getName().equals(fieldName)) {
-                        field = possible;
-                        break;
+                // Handle each line
+                for (String line : lines) {
+                    handleLine(line, last());
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        
+        private void handleLine(String line, ConfigData configData) {
+            if (line.endsWith(":")) {
+                String fieldName = line.trim().replace(":", "");
+                Field found = fieldFromNameAndClass(last().getClass(), fieldName);
+                try {
+                    if (found != null) {
+                        parsingStack.add((ConfigData)found.get(last()));
+                    } else {
+                        // Just blindly pop from the stack, clean this up later in handle line or something
+                        parsingStack.remove(last());
+                        handleLine(line, last());
+                    }
+                } catch (IllegalAccessException e) {
+                    e.printStackTrace();
+                }
+                return;
+            }
+            
+            String fieldName;
+            String value;
+            try {
+                // Attempt to parse the line
+                String[] split = line.split("=");
+                
+                fieldName = split[0].replace(" ", "");
+                value = split[1].replaceFirst(" *", "");
+            } catch (IndexOutOfBoundsException e) {
+                throw new UnknownFormatConversionException(
+                    "Unable to read config line \"" +
+                        line +
+                        "\" for file " +
+                        configFile.getName()
+                );
+            }
+            
+            // Find the field that matches the expected name
+            Field field = fieldFromNameAndClass(last().getClass(), fieldName);
+            
+            // If we found a field, set it
+            if (field != null) {
+                unpackFieldValuePair(configData, field, value);
+            } else {
+                // Just blindly pop from the stack, clean this up later in handle line or something
+                parsingStack.remove(last());
+                handleLine(line, last());
+            }
+        }
+        
+        private void createConfigFile() {
+            createConfigFile(0);
+        }
+        
+        private void createConfigFile(int depth) {
+            // Add every field to the file
+            for (Field field : last().getClass().getFields()) {
+                if (isStandardClassType(field.getType())) {
+                    appendDefaultField(writer, last(), field, depth);
+                } else {
+                    try {
+                        appendDefaultField(
+                            writer,
+                            last(),
+                            field,
+                            depth
+                        );
+                        parsingStack.add((ConfigData)field.get(last()));
+                        createConfigFile(depth + 1);
+                    } catch (IllegalAccessException e) {
+                        e.printStackTrace();
                     }
                 }
+            }
+            parsingStack.remove(last());
+        }
+        
+        private void appendDefaultField(FileWriter writer, ConfigData type, Field field, int depth) {
+            try {
+                // Check if the field has a comment annotation
+                Comment annotation = field.getAnnotation(Comment.class);
                 
-                // If we found a field, set it
-                if (field != null) {
-                    unpackFieldValuePair(configData, field, value);
+                // If it does, write the comment and mark that we need an extra line
+                // This keeps the output overall more clean
+                boolean doExtraBreak = false;
+                if (annotation != null) {
+                    String clean = "//" + annotation.value().replace("\n", "\n//");
+                    writer
+                        .append(String.join("", Collections.nCopies(depth, "    ")))
+                        .append(clean)
+                        .append("\n");
+                    doExtraBreak = true;
+                }
+                
+                // Write the pair and extra line if required
+                if (isStandardClassType(field.getType())) {
+                    writer
+                        .append(String.join("", Collections.nCopies(depth, "    ")))
+                        .append(field.getName())
+                        .append("=")
+                        .append(field.get(type).toString())
+                        .append("\n");
+                } else {
+                    writer
+                        .append(String.join("", Collections.nCopies(depth, "    ")))
+                        .append(field.getName())
+                        .append(":\n");
+                }
+                if (doExtraBreak && isStandardClassType(field.getType())) {
+                    writer.append("\n");
+                }
+            } catch (IOException | IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
+        
+        private void unpackFieldValuePair(ConfigData object, Field field, String value) {
+            // Fairly self explanatory
+            // Only wish I could use switch blocks
+            try {
+                Class<?> fieldType = field.getType();
+                if (fieldType == int.class) {
+                    field.set(object, Integer.parseInt(value));
+                    return;
+                }
+                if (fieldType == float.class) {
+                    field.set(object, Float.parseFloat(value));
+                    return;
+                }
+                if (fieldType == double.class) {
+                    field.set(object, Double.parseDouble(value));
+                    return;
+                }
+                if (fieldType == String.class) {
+                    field.set(object, value);
+                    return;
+                }
+                if (fieldType == boolean.class) {
+                    field.set(object, Boolean.parseBoolean(value));
+                    return;
+                }
+                if (fieldType.isEnum()) {
+                    try {
+                        //noinspection unchecked
+                        field.set(object, Enum.valueOf((Class<Enum>)fieldType, value));
+                    } catch (IllegalArgumentException ignored) {}
+                    return;
+                }
+                throw new UnknownFormatConversionException(field.getName() + " was unable to be deserialized (unsupported type \"" + fieldType + "\")");
+            } catch (IllegalAccessException e) {
+                e.printStackTrace();
+            }
+        }
+        
+        public void end() {
+            try {
+                writer.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        
+        private boolean isStandardClassType(Class<?> clazz) {
+            return clazz.isPrimitive() || clazz.isEnum() || clazz == String.class;
+        }
+        
+        private ConfigData last() {
+            return parsingStack.get(parsingStack.size() - 1);
+        }
+        
+        private Field fieldFromNameAndClass(Class<?> clazz, String name) {
+            Field[] possible = clazz.getFields();
+            for (Field possibleField : possible) {
+                if (possibleField.getName().equals(name)) {
+                    return possibleField;
                 }
             }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-    
-    private static void createConfigFile(File configFile, ConfigData object) {
-        try {
-            // Add every field to the file
-            FileWriter writer = new FileWriter(configFile);
-            for (Field field : object.getClass().getFields()) {
-                appendDefaultField(writer, object, field);
-            }
-            writer.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-    
-    private static void appendDefaultField(FileWriter writer, ConfigData type, Field field) {
-        try {
-            // Check if the field has a comment annotation
-            Comment annotation = field.getAnnotation(Comment.class);
-            
-            // If it does, write the comment and mark that we need an extra line
-            // This keeps the output overall more clean
-            boolean doExtraBreak = false;
-            if (annotation != null) {
-                String clean = "//" + annotation.value().replace("\n", "\n//");
-                writer.append(clean).append("\n");
-                doExtraBreak = true;
-            }
-            
-            // Write the pair and extra line if required
-            writer.append(field.getName()).append("=").append(field.get(type).toString()).append("\n");
-            if (doExtraBreak) {
-                writer.append("\n");
-            }
-        } catch (IOException | IllegalAccessException e) {
-            e.printStackTrace();
-        }
-    }
-    
-    private static void unpackFieldValuePair(ConfigData object, Field field, String value) {
-        // Fairly self explanatory
-        // Only with I could use switch blocks
-        try {
-            Class<?> fieldType = field.getType();
-            if (fieldType == int.class) {
-                field.set(object, Integer.parseInt(value));
-                return;
-            }
-            if (fieldType == float.class) {
-                field.set(object, Float.parseFloat(value));
-                return;
-            }
-            if (fieldType == double.class) {
-                field.set(object, Double.parseDouble(value));
-                return;
-            }
-            if (fieldType == String.class) {
-                field.set(object, value);
-                return;
-            }
-            if (fieldType == boolean.class) {
-                field.set(object, Boolean.parseBoolean(value));
-                return;
-            }
-            throw new UnknownFormatConversionException(field.getName() + " was unable to be deserialized (unsupported type \"" + fieldType + "\")");
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
+            return null;
         }
     }
 }
