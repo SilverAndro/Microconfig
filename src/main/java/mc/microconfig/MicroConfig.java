@@ -7,7 +7,10 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.UnknownFormatConversionException;
 
 public class MicroConfig {
     /**
@@ -59,6 +62,7 @@ public class MicroConfig {
     private static class ConfigProcessor {
         File configFile;
         FileWriter writer;
+        int lastIndentation = 0;
         
         ArrayList<ConfigData> parsingStack = new ArrayList<>();
         
@@ -75,11 +79,28 @@ public class MicroConfig {
         private void loadConfig() {
             try {
                 List<String> lines = Files.readAllLines(configFile.toPath());
-                lines.removeIf(s -> s.length() < 3 || s.trim().startsWith("//"));
                 
                 // Handle each line
                 for (String line : lines) {
-                    handleLine(line, last());
+                    int orig = line.length();
+                    int after = line.replaceFirst(" *", "").length();
+                    int newIndent = (orig - after) / 4;
+                    
+                    int diff = newIndent - lastIndentation;
+                    while (diff < 0) {
+                        ConfigData save = last();
+                        parsingStack.remove(save);
+                        if (parsingStack.isEmpty()) {
+                            parsingStack.add(save);
+                        }
+                        diff++;
+                    }
+    
+                    lastIndentation = newIndent;
+                    
+                    if (!line.trim().startsWith("//") && line.trim().length() > 3) {
+                        handleLine(line.trim(), last());
+                    }
                 }
             } catch (IOException e) {
                 e.printStackTrace();
@@ -93,10 +114,6 @@ public class MicroConfig {
                 try {
                     if (found != null) {
                         parsingStack.add((ConfigData)found.get(last()));
-                    } else {
-                        // Just blindly pop from the stack, clean this up later in handle line or something
-                        parsingStack.remove(last());
-                        handleLine(line, last());
                     }
                 } catch (IllegalAccessException e) {
                     e.printStackTrace();
@@ -127,10 +144,6 @@ public class MicroConfig {
             // If we found a field, set it
             if (field != null) {
                 unpackFieldValuePair(configData, field, value);
-            } else {
-                // Just blindly pop from the stack, clean this up later in handle line or something
-                parsingStack.remove(last());
-                handleLine(line, last());
             }
         }
         
@@ -229,7 +242,8 @@ public class MicroConfig {
                     try {
                         //noinspection unchecked
                         field.set(object, Enum.valueOf((Class<Enum>)fieldType, value));
-                    } catch (IllegalArgumentException ignored) {}
+                    } catch (IllegalArgumentException ignored) {
+                    }
                     return;
                 }
                 throw new UnknownFormatConversionException(field.getName() + " was unable to be deserialized (unsupported type \"" + fieldType + "\")");
