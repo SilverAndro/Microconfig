@@ -183,7 +183,12 @@ public class MicroConfig {
                 // This keeps the output overall more clean
                 boolean doExtraBreak = false;
                 if (annotation != null) {
-                    String clean = "//" + annotation.value().replace("\n", "\n" + Collections.nCopies(depth, "    ") + "//");
+                    String clean = "//" + annotation.value().replace(
+                        "\n",
+                        "\n" +
+                        String.join("", Collections.nCopies(depth, "    ")) +
+                        "//"
+                    );
                     writer
                         .append(String.join("", Collections.nCopies(depth, "    ")))
                         .append(clean)
