@@ -3,7 +3,7 @@
   "id": "microconfig",
   "version": "${version}",
   "name": "Microconfig",
-  "description": "",
+  "description": "A very small config library",
   "authors": [],
   "contact": {},
   "license": "MPL-2.0",

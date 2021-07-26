@@ -183,7 +183,7 @@ public class MicroConfig {
                 // This keeps the output overall more clean
                 boolean doExtraBreak = false;
                 if (annotation != null) {
-                    String clean = "//" + annotation.value().replace("\n", "\n//");
+                    String clean = "//" + annotation.value().replace("\n", "\n" + Collections.nCopies(depth, "    ") + "//");
                     writer
                         .append(String.join("", Collections.nCopies(depth, "    ")))
                         .append(clean)
@@ -240,7 +240,7 @@ public class MicroConfig {
                 }
                 if (fieldType.isEnum()) {
                     try {
-                        //noinspection unchecked
+                        // noinspection unchecked,rawtypes
                         field.set(object, Enum.valueOf((Class<Enum>)fieldType, value));
                     } catch (IllegalArgumentException ignored) {
                     }
