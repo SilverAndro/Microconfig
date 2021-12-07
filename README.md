@@ -31,7 +31,7 @@ repositories {
 ```
 dependencies {
   ...
-  modImplementation 'com.github.P03W:Microconfig:1.0.5'
-  include 'com.github.P03W:Microconfig:1.0.5'
+  modImplementation 'com.github.P03W:Microconfig:<VERSION>'
+  include 'com.github.P03W:Microconfig:<VERSION>'
 }
 ```
