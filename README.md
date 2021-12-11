@@ -5,7 +5,7 @@
 A tiny config library, packaged for fabric
 
 ### Usage
-1. Make a class implement ConfigData
+1. Make a class implement `ConfigData`
 2. Use `ConfigClass config = MicroConfig.getOrCreate("config_file_name", new ConfigClass())` wherever
 
 ### Supported data types
@@ -15,10 +15,11 @@ A tiny config library, packaged for fabric
 - Float
 - Double
 - String
+- Nested Classes
 
-Everything must be a top level field, public, and be one of those data types
+Everything must be a top level field, public, and be one of those data types, nested classes should be `static` and implement `ConfigData` as well.
 
-Comments are supported through the `@Comment` annotation, if you need a linebreak use \n
+Comments are supported through the `@Comment` annotation, if you need a linebreak use `\n`
 
 ### Installing
 ```

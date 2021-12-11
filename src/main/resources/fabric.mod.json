@@ -4,7 +4,7 @@
   "version": "${version}",
   "name": "Microconfig",
   "description": "A very small config library",
-  "authors": [],
+  "authors": ["P03W"],
   "contact": {},
   "license": "MPL-2.0",
   "environment": "*",
