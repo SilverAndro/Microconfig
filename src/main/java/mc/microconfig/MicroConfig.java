@@ -155,7 +155,7 @@ public class MicroConfig {
                 field.set(object, Boolean.parseBoolean(value));
             } else if (String.class.equals(field.getType())) {
                 field.set(object, value);
-            } else if (field.isEnumConstant()) {
+            } else if (field.getType().isEnum()) {
                 //noinspection unchecked,rawtypes
                 field.set(object, Enum.valueOf((Class<Enum>)field.getType(), value));
             } else {
