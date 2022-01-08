@@ -1,0 +1,46 @@
+mc.microconfig.Comment -> mc.microconfig.Comment:
+    java.lang.String value() -> value
+mc.microconfig.ConfigData -> mc.microconfig.ConfigData:
+mc.microconfig.MicroConfig -> mc.microconfig.MicroConfig:
+    java.util.List handlers -> a
+    void <init>(java.util.List) -> <init>
+    mc.microconfig.ConfigData getOrCreate(java.lang.String,mc.microconfig.ConfigData) -> getOrCreate
+    mc.microconfig.ConfigData getOrCreate(java.io.File,mc.microconfig.ConfigData) -> getOrCreate
+    mc.microconfig.ConfigData getOrCreateWithHandlers(java.lang.String,mc.microconfig.ConfigData) -> getOrCreateWithHandlers
+    mc.microconfig.ConfigData getOrCreateWithHandlers(java.io.File,mc.microconfig.ConfigData) -> getOrCreateWithHandlers
+mc.microconfig.MicroConfigCommon -> a:
+    java.lang.reflect.Field getClassField(java.lang.Class,java.lang.String) -> a
+    boolean couldHandle(java.lang.Class,java.util.List) -> a
+    mc.microconfig.MicroConfigTypeHandler findHandler(java.lang.Class,java.util.List) -> b
+    boolean lambda$findHandler$1(java.lang.Class,mc.microconfig.MicroConfigTypeHandler) -> a
+    boolean lambda$couldHandle$0(java.lang.Class,mc.microconfig.MicroConfigTypeHandler) -> b
+mc.microconfig.MicroConfigReader -> b:
+    java.util.ArrayList parsingStack -> a
+    java.io.File configFile -> b
+    java.util.List handlers -> c
+    mc.microconfig.MicroConfigReader$State state -> d
+    java.util.ArrayList currentArray -> e
+    java.lang.Class arrayType -> f
+    void <init>(java.io.File,mc.microconfig.ConfigData,java.util.List) -> <init>
+    java.lang.Object convert(java.lang.String,java.lang.Class) -> a
+    void loadConfig() -> a
+    mc.microconfig.ConfigData last() -> b
+mc.microconfig.MicroConfigReader$State -> c:
+    mc.microconfig.MicroConfigReader$State Normal -> a
+    mc.microconfig.MicroConfigReader$State Array -> b
+    void <init>(java.lang.String,int) -> <init>
+    void <clinit>() -> <clinit>
+mc.microconfig.MicroConfigTypeHandler -> mc.microconfig.MicroConfigTypeHandler:
+    java.lang.Object parse(java.lang.String) -> parse
+    java.lang.String write(java.lang.Object) -> write
+mc.microconfig.MicroConfigWriter -> d:
+    java.util.ArrayList parsingStack -> a
+    java.io.FileWriter writer -> b
+    java.util.List handlers -> c
+    void <init>(java.io.FileWriter,mc.microconfig.ConfigData,java.util.List) -> <init>
+    void createConfigFile(int) -> a
+    boolean writeComment(java.lang.reflect.Field,java.lang.String) -> a
+    mc.microconfig.ConfigData last() -> a
+    void lambda$appendArrayListField$0(java.lang.String,java.lang.Object) -> a
+mc.microconfig.TypeProvider -> mc.microconfig.TypeProvider:
+    java.lang.Class value() -> value

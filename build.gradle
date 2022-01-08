@@ -1,3 +1,12 @@
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.guardsquare:proguard-gradle:7.2.0-beta6'
+    }
+}
+
 plugins {
     id 'fabric-loom' version '0.7-SNAPSHOT'
     id 'maven-publish'
@@ -44,6 +53,28 @@ jar {
     from "LICENSE"
 }
 
+task copyObfuscated(type: Copy) {
+    from "build/libs/pro"
+    into "build/libs"
+    include '*.jar'
+}
+
+//noinspection UnnecessaryQualifiedReference
+task pullTheProguardKronk(type: proguard.gradle.ProGuardTask, dependsOn: build) {
+    configuration("config.proguard")
+
+    injars(file("build/libs/microconfig-"+version+".jar"))
+    outjars(file("build/libs/pro/microconfig-"+version+".jar"))
+}
+
+configure(pullTheProguardKronk) {
+    group = "build"
+    description = "Proguard the output JAR for JIJ"
+}
+
+pullTheProguardKronk.finalizedBy(copyObfuscated)
+remapJar.finalizedBy(pullTheProguardKronk)
+
 // configure the maven publication
 publishing {
     publications {
@@ -61,6 +92,6 @@ publishing {
     // select the repositories you want to publish to
     repositories {
         // uncomment to publish to the local maven
-        // mavenLocal()
+        mavenLocal()
     }
 }
