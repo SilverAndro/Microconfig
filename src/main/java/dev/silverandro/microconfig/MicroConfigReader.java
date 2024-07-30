@@ -1,4 +1,4 @@
-package mc.microconfig;
+package dev.silverandro.microconfig;
 
 import java.io.File;
 import java.io.IOException;
@@ -8,25 +8,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UnknownFormatConversionException;
 
-import static mc.microconfig.MicroConfigCommon.getClassField;
-
 class MicroConfigReader {
     private final ArrayList<ConfigData> parsingStack = new ArrayList<>();
     private final File configFile;
-    private final List<MicroConfigTypeHandler<?>> handlers;
-    
-    enum State {
-        Normal,
-        Array
-    }
-    
-    private State state = State.Normal;
-    private ArrayList<Object> currentArray = null;
-    private Class<?> arrayType = null;
-    
-    public MicroConfigReader(File configFile, ConfigData data, List<MicroConfigTypeHandler<?>> handlers) throws IOException {
+
+    public MicroConfigReader(File configFile, ConfigData data) throws IOException {
         this.configFile = configFile;
-        this.handlers = handlers;
         parsingStack.add(data);
         loadConfig();
     }
@@ -45,10 +32,6 @@ class MicroConfigReader {
         } else if (expected.isEnum()) {
             //noinspection unchecked,rawtypes
             return Enum.valueOf((Class<Enum>)expected, value);
-        } else if (MicroConfigCommon.couldHandle(expected, handlers)) {
-            //noinspection unchecked
-            MicroConfigTypeHandler<Object> handler = (MicroConfigTypeHandler<Object>)MicroConfigCommon.findHandler(expected, handlers);
-            return handler.parse(value);
         } else {
             throw new UnknownFormatConversionException("Unsupported type \"" + expected + "\"");
         }
@@ -90,46 +73,12 @@ class MicroConfigReader {
     }
     
     private void handleLine(String line, ConfigData configData) {
-        if (state == State.Array) {
-            if (line.startsWith("]")) {
-                currentArray = null;
-                state = State.Normal;
-                return;
-            }
-    
-            currentArray.add(convert(line, arrayType));
-            return;
-        }
-        
         if (line.endsWith(":")) {
             String fieldName = line.trim().replace(":", "");
-            Field found = getClassField(last().getClass(), fieldName);
+            Field found = MicroConfigCommon.getClassField(last().getClass(), fieldName);
             try {
                 if (found != null) {
                     parsingStack.add((ConfigData)found.get(last()));
-                }
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            }
-            return;
-        }
-        
-        if (line.endsWith("[")) {
-            String fieldName = line.trim().replace("[", "");
-            Field found = getClassField(last().getClass(), fieldName);
-            try {
-                if (found != null) {
-                    TypeProvider typeProvider = found.getAnnotation(TypeProvider.class);
-                    if (typeProvider == null) {
-                        throw new IllegalStateException("Cannot handle ArrayList " + found + " without a type annotated with @TypeProvider");
-                    }
-                    //noinspection unchecked
-                    ArrayList<Object> arrayList = (ArrayList<Object>)found.get(last());
-                    arrayList.clear();
-                    
-                    currentArray = arrayList;
-                    arrayType = typeProvider.value();
-                    state = State.Array;
                 }
             } catch (IllegalAccessException e) {
                 e.printStackTrace();
@@ -155,7 +104,7 @@ class MicroConfigReader {
         }
         
         // Find the field that matches the expected name
-        Field field = getClassField(last().getClass(), fieldName);
+        Field field = MicroConfigCommon.getClassField(last().getClass(), fieldName);
         
         // If we found a field, set it
         if (field != null) {

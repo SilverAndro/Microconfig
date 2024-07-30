@@ -1,4 +1,4 @@
-package mc.microconfig;
+package dev.silverandro.microconfig;
 
 import java.lang.reflect.Field;
 import java.util.HashSet;
@@ -44,20 +44,5 @@ class MicroConfigCommon {
      */
     static boolean isStandardClassType(Class<?> clazz) {
         return clazz.isPrimitive() || clazz.isEnum() || clazz == String.class;
-    }
-    
-    static boolean couldHandle(Class<?> clazz, List<MicroConfigTypeHandler<?>> handlers) {
-        return handlers.stream().anyMatch(microConfigTypeHandler -> {
-            TypeProvider provides = microConfigTypeHandler.getClass().getAnnotation(TypeProvider.class);
-            return provides.value().equals(clazz);
-        });
-    }
-    
-    static MicroConfigTypeHandler<?> findHandler(Class<?> clazz, List<MicroConfigTypeHandler<?>> handlers) {
-        //noinspection OptionalGetWithoutIsPresent
-        return handlers.stream().filter(microConfigTypeHandler -> {
-            TypeProvider provides = microConfigTypeHandler.getClass().getAnnotation(TypeProvider.class);
-            return provides.value().equals(clazz);
-        }).findFirst().get();
     }
 }

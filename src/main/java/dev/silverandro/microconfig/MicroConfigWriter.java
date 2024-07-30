@@ -1,23 +1,17 @@
-package mc.microconfig;
+package dev.silverandro.microconfig;
 
 import java.io.FileWriter;
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
-
-import static mc.microconfig.MicroConfigCommon.couldHandle;
-import static mc.microconfig.MicroConfigCommon.isStandardClassType;
 
 class MicroConfigWriter {
     private final ArrayList<ConfigData> parsingStack = new ArrayList<>();
     private final FileWriter writer;
-    private final List<MicroConfigTypeHandler<?>> handlers;
     
-    MicroConfigWriter(FileWriter writer, ConfigData data, List<MicroConfigTypeHandler<?>> handlers) throws IOException {
+    MicroConfigWriter(FileWriter writer, ConfigData data) throws IOException {
         this.writer = writer;
-        this.handlers = handlers;
         parsingStack.add(data);
         createConfigFile(0);
         writer.close();
@@ -26,7 +20,7 @@ class MicroConfigWriter {
     private void createConfigFile(int depth) throws IOException {
         for (Field field : last().getClass().getFields()) {
             Class<?> type = field.getType();
-            if (isStandardClassType(type)) {
+            if (MicroConfigCommon.isStandardClassType(type)) {
                 appendStandardField(field, depth);
             } else if (type == ArrayList.class) {
                 appendArrayListField(field, depth);
@@ -38,10 +32,6 @@ class MicroConfigWriter {
                 } catch (IllegalAccessException e) {
                     e.printStackTrace();
                 }
-            } else if (MicroConfigCommon.couldHandle(type, handlers)) {
-                //noinspection unchecked
-                MicroConfigTypeHandler<Object> handler = (MicroConfigTypeHandler<Object>)MicroConfigCommon.findHandler(type, handlers);
-                writeHandled(field, depth, handler);
             } else {
                 throw new IllegalStateException("Don't know how to handle field " + field.getName() + " with type " + type);
             }
@@ -71,26 +61,6 @@ class MicroConfigWriter {
         }
         
         return doExtraBreak;
-    }
-    
-    private void writeHandled(Field field, int depth, MicroConfigTypeHandler<Object> handler) throws IOException {
-        try {
-            String indent = String.join("", Collections.nCopies(depth, "    "));
-            boolean needsExtraLine = writeComment(field, indent);
-            
-            writer
-                .append(indent)
-                .append(field.getName())
-                .append("=").append(handler.write(field.get(last())))
-                .append("\n");
-            
-            if (needsExtraLine) {
-                writer.append(indent).append("\n");
-            }
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-            System.exit(-1);
-        }
     }
     
     private void appendStandardField(Field field, int depth) throws IOException {
@@ -127,13 +97,7 @@ class MicroConfigWriter {
             ArrayList<?> arr = (ArrayList<?>)field.get(last());
             arr.forEach(o -> {
                 try {
-                    if (couldHandle(o.getClass(), handlers)) {
-                        //noinspection unchecked
-                        MicroConfigTypeHandler<Object> handler = (MicroConfigTypeHandler<Object>)MicroConfigCommon.findHandler(o.getClass(), handlers);
-                        writer.append(nextIndent).append(handler.write(o)).append("\n");
-                    } else {
-                        writer.append(nextIndent).append(o.toString()).append("\n");
-                    }
+                    writer.append(nextIndent).append(o.toString()).append("\n");
                 } catch (IOException e) {
                     throw new IllegalStateException(e);
                 }

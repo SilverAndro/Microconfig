@@ -1,19 +1,10 @@
-buildscript {
-    repositories {
-        mavenCentral()
-    }
-    dependencies {
-        classpath 'com.guardsquare:proguard-gradle:7.2.0-beta6'
-    }
-}
-
 plugins {
-    id 'fabric-loom' version '0.7-SNAPSHOT'
+    id 'fabric-loom' version '1.7.+'
     id 'maven-publish'
 }
 
-sourceCompatibility = JavaVersion.VERSION_1_8
-targetCompatibility = JavaVersion.VERSION_1_8
+sourceCompatibility = JavaVersion.VERSION_17
+targetCompatibility = JavaVersion.VERSION_17
 
 archivesBaseName = project.archives_base_name
 version = project.mod_version
@@ -34,64 +25,56 @@ processResources {
     }
 }
 
-// ensure that the encoding is set to UTF-8, no matter what the system default is
-// this fixes some edge cases with special characters not displaying correctly
-// see http://yodaconditions.net/blog/fix-for-java-file-encoding-problems-with-gradle.html
-tasks.withType(JavaCompile) {
-    options.encoding = "UTF-8"
-}
-
-// Loom will automatically attach sourcesJar to a RemapSourcesJar task and to the "build" task
-// if it is present.
-// If you remove this task, sources will not be generated.
-task sourcesJar(type: Jar, dependsOn: classes) {
-    classifier = "sources"
-    from sourceSets.main.allSource
+java {
+    withSourcesJar()
 }
 
 jar {
     from "LICENSE"
 }
 
-task copyObfuscated(type: Copy) {
-    from "build/libs/pro"
-    into "build/libs"
-    include '*.jar'
-}
-
-//noinspection UnnecessaryQualifiedReference
-task pullTheProguardKronk(type: proguard.gradle.ProGuardTask, dependsOn: build) {
-    configuration("config.proguard")
-
-    injars(file("build/libs/microconfig-"+version+".jar"))
-    outjars(file("build/libs/pro/microconfig-"+version+".jar"))
-}
-
-configure(pullTheProguardKronk) {
-    group = "build"
-    description = "Proguard the output JAR for JIJ"
-}
-
-pullTheProguardKronk.finalizedBy(copyObfuscated)
-remapJar.finalizedBy(pullTheProguardKronk)
-
-// configure the maven publication
 publishing {
     publications {
-        mavenJava(MavenPublication) {
-            // add all the jars that should be included when publishing to maven
-            artifact(remapJar) {
-                builtBy remapJar
-            }
-            artifact(sourcesJar) {
-                builtBy remapSourcesJar
+        create("microconfig", MavenPublication) {
+            from(components["java"])
+            artifactId 'microconfig'
+
+            pom {
+                name.set("Microconfig")
+                description.set("Tiny custom config system")
+                inceptionYear.set("2020")
+                licenses {
+                    license {
+                        name.set("MPL-2.0")
+                        distribution.set("repo")
+                    }
+                }
+                scm {
+                    url.set("https://github.com/SilverAndro/microconfig")
+                }
+                issueManagement {
+                    system.set("Github")
+                    url.set("https://github.com/SilverAndro/microconfig/issues")
+                }
+                developers {
+                    developer {
+                        name.set("Silver")
+                        email.set("me@silverando.dev")
+                        url.set("silverandro.dev")
+                    }
+                }
             }
         }
     }
 
-    // select the repositories you want to publish to
     repositories {
-        // uncomment to publish to the local maven
-        mavenLocal()
+        maven {
+            name = "SilverMaven"
+            url = uri("https://maven.silverandro.dev")
+            credentials {
+                username = System.getProperty("silverMavenUsername")
+                password = System.getProperty("silverMavenPassword")
+            }
+        }
     }
 }

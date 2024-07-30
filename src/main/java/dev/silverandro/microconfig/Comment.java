@@ -1,4 +1,4 @@
-package mc.microconfig;
+package dev.silverandro.microconfig;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -6,7 +6,7 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.FIELD, ElementType.TYPE})
-public @interface TypeProvider {
-    Class<?> value();
+@Target(ElementType.FIELD)
+public @interface Comment {
+    String value();
 }
