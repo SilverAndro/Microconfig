@@ -66,7 +66,7 @@ class MicroConfigReader {
             
             lastIndentation = newIndent;
             
-            if (!line.trim().startsWith("//") && line.trim().length() > 0) {
+            if (!line.trim().startsWith("//") && !line.trim().isEmpty()) {
                 handleLine(line.trim(), last());
             }
         }
